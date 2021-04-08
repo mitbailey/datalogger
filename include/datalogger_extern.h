@@ -15,10 +15,20 @@
 enum ERROR{
     SAVE_OPEN = -1,
     DATA_OPEN = -2,
-    INDEX_GET = -3
+    SAVE_ACCESS = -3
 };
 
-// Will need a lock in implementation
-int logData(int size, int* data);
+// TODO: Will need a lock in implementation
+// Writes the passed data to a binary log file.
+int dlgr_logData(int size, int* data);
+
+// Sets the maximum log size, in bytes, will create a new log file when this is hit. 
+int dlgr_setMaxLogSize(int size_KB);
+
+// Sets the maximum log directory size, will overwrite logs at dirSize/logSize logs. 
+int dlgr_setMaxDirSize(int size_KB);
+
+// 0 to ignore max directory size and never overwrite, 1 to behave
+int dlgr_doOverwrite(int overwrite);
 
 #endif // DATALOGGER_EXTERN_H
