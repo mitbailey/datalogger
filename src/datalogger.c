@@ -17,7 +17,7 @@
 /* datalogger_directory
  * - log
  * - - eps
- * - - - save.cfg
+ * - - - settings.cfg
  * - - - 0.dat
  * - - - 1.dat
  * - - - 2.dat
@@ -25,7 +25,7 @@
  * - - - 4.dat
  * - - - 5.dat
  * - - acs
- * - - - save.cfg
+ * - - - settings.cfg
  * - - - 0.dat
  * - - - 1.dat
  */
@@ -41,14 +41,14 @@ BEGIN
 */
 
 // data: .data files
-// save: Datalogger's personal variable repository.
+// settings: Datalogger's personal variable repository.
 // directory: c-string, likely the name of the calling module
 // Note: Directory will probably be accessed some other way eventually.
 int logData(int size, int* dataIn, char* directory){
-    // Constructs the save.cfg directory into saveFile.
-    char saveFile[20] = "/log/";
-    strcat(saveFile, directory); // "/log/eps"
-    strcat(saveFile, "/save.cfg"); // "/log/eps/save/cfg"
+    // Constructs the settings.cfg directory into settingsFile.
+    char settingsFile[20] = "/log/";
+    strcat(settingsFile, directory); // "/log/eps"
+    strcat(settingsFile, "/settings.cfg"); // "/log/eps/settings/cfg"
 
     // Index will get the data file number, can only accept up to 999.
     char sIndex[10]; // sIndex = c string index
@@ -57,19 +57,19 @@ int logData(int size, int* dataIn, char* directory){
     char sMaxDirSize[10];
     char sDoOverwrite[1];
 
-    // Open the save file and update numbers.
-    FILE *save = NULL;
-    save = fopen("/sav/values.sav", "r+");
+    // Open the settings file and update numbers.
+    FILE *settings = NULL;
+    settings = fopen(settingsFile, "r+");
 
-    if (save = NULL){
+    if (settings = NULL){
         return SAVE_OPEN;
     }
 
     // Gets the index, maxSizes, and doOverwrite..
-    if (fgets(sIndex, 10, (FILE*)save) == NULL
-    || fgets(sMaxFileSize, 10, (FILE*)save) == NULL
-    || fgets(sMaxDirSize, 10, (FILE*)save) == NULL
-    || fgets(sDoOverwrite, 1, (FILE*)save == NULL)){
+    if (fgets(sIndex, 10, (FILE*)settings) == NULL
+    || fgets(sMaxFileSize, 10, (FILE*)settings) == NULL
+    || fgets(sMaxDirSize, 10, (FILE*)settings) == NULL
+    || fgets(sDoOverwrite, 1, (FILE*)settings == NULL)){
         return SAVE_ACCESS;
     }
 
@@ -113,18 +113,18 @@ int logData(int size, int* dataIn, char* directory){
     // This file has reached its maximum size.
     // Make a new one and iterate the index.
     if (fileSize >= maxFileSize){ // 16KB
-        fclose(save);
-        save = fopen(saveFile, "w");
+        fclose(settings);
+        settings = fopen(settingsFile, "w");
 
-        if (save = NULL){
+        if (settings = NULL){
             return SAVE_OPEN;
         }
 
         // Rewrite the entire file.
-        fprintf(save, "%d\n", index+1);
-        fprintf(save, "%d\n", maxFileSize);
-        fprintf(save, "%d\n", maxDirSize);
-        fprintf(save, "%d\n", doOverwrite);
+        fprintf(settings, "%d\n", index+1);
+        fprintf(settings, "%d\n", maxFileSize);
+        fprintf(settings, "%d\n", maxDirSize);
+        fprintf(settings, "%d\n", doOverwrite);
 
         fclose(data);
         data = fopen(dataFileOld, "w"); // This will overwrite the old file.
@@ -136,7 +136,7 @@ int logData(int size, int* dataIn, char* directory){
 
     // fwrite(dataIn, elementSize, sizeof(data), data);
 
-    fclose(save);
+    fclose(settings);
     fclose(data);
 }
 
@@ -145,52 +145,177 @@ int* retrieveData(){
 
 }
 
-// Sets the maximum log size, in bytes, will create a new log file when this is hit. 
-int dlgr_setMaxLogSize(int size_KB){
-    // Overwrite the value of line 2.
-    FILE* save = NULL;
-    // TODO: Cannot do this directory anymore, see logData(), have to variably construct dir.
-    save = fopen("/sav/values.sav", "r+");
-    if (save = NULL){
+// TODO: set max etc can probably be condensed into a edit settings function... ?
+
+int dlgr_editSettings(int value, int setting, char* directory){
+    // TODO: Overwrite value.
+    // Open settings.cfg
+    // Retrieve data
+    // Close settings.cfg
+    // Open settings.cfg "w" (deleting the content)
+    // Write modified data
+    // Close settings.cfg
+    // Most of this is already done in logData() (can be reused).
+    
+    // Constructs the settings.cfg directory into settingsFile.
+    char settingsFile[20] = "/log/";
+    strcat(settingsFile, directory); // "/log/eps"
+    strcat(settingsFile, "/settings.cfg"); // "/log/eps/settings/cfg"
+
+    char sIndex[10]; // sIndex = c string index
+    char sIndexP1[10]; // sIndex.toInt() + 1
+    char sMaxFileSize[10];
+    char sMaxDirSize[10];
+    char sDoOverwrite[1];
+
+    // Open the settings file and update numbers.
+    FILE *settings = NULL;
+    settings = fopen(settingsFile, "r+");
+
+    if (settings = NULL){
         return SAVE_OPEN;
     }
 
-    // TODO: Overwrite value.
-    // Open save.cfg
-    // Retrieve data
-    // Close save.cfg
-    // Open save.cfg "w" (deleting the content)
-    // Write modified data
-    // Close save.cfg
-    // Most of this is already done in logData() (can be reused).
+    // Gets the index, maxSizes, and doOverwrite..
+    if (fgets(sIndex, 10, (FILE*)settings) == NULL
+    || fgets(sMaxFileSize, 10, (FILE*)settings) == NULL
+    || fgets(sMaxDirSize, 10, (FILE*)settings) == NULL
+    || fgets(sDoOverwrite, 1, (FILE*)settings == NULL)){
+        return SAVE_ACCESS;
+    }
 
-    fclose(save);
+    // Converts the retrieved string to an int.
+    int maxFileSize = atoi(sMaxFileSize);
+    int maxDirSize = atoi(sMaxDirSize);
+    int doOverwrite = atoi(sDoOverwrite);
+    int index = atoi(sIndex);
+
+    fclose(settings);
+
+    // Adjust values as desired.
+    //maxFileSize = size_B;
+    switch(setting){
+        case MAX_FILE_SIZE:
+            if (value > SIZE_FILE_HARDLIMIT || value < 1){
+                return SET_SETTING;
+            }
+
+            maxFileSize = value;
+
+            break;
+        case MAX_DIR_SIZE:
+            // Memory amount out-of-bounds.
+            if (value > SIZE_DIR_HARDLIMIT || value < 1){
+                return SET_SETTING;
+            }
+
+            maxDirSize = value;
+
+            break;
+        case DO_OVERWRITE:
+            // Psuedo-boolean value not binary.
+            if (value != 0 && value != 1){
+                return SET_SETTING;
+            }
+
+            doOverwrite = value;
+
+            break;
+    }
+
+    // Reopen the file in w-mode, clearing the file contents.
+    settings = fopen(settingsFile, "w");
+
+    // Write everything back into the file.
+    fprintf(settings, "%d\n", index);
+    fprintf(settings, "%d\n", maxFileSize);
+    fprintf(settings, "%d\n", maxDirSize);
+    fprintf(settings, "%d\n", doOverwrite);
+
+    fclose(settings);
+}
+
+/*
+// Sets the maximum log size, in bytes. will create a new log file when this is hit. 
+int dlgr_setMaxFileSize(int size_B, char* directory){
+    // TODO: Overwrite value.
+    // Open settings.cfg
+    // Retrieve data
+    // Close settings.cfg
+    // Open settings.cfg "w" (deleting the content)
+    // Write modified data
+    // Close settings.cfg
+    // Most of this is already done in logData() (can be reused).
+    
+    // Constructs the settings.cfg directory into settingsFile.
+    char settingsFile[20] = "/log/";
+    strcat(settingsFile, directory); // "/log/eps"
+    strcat(settingsFile, "/settings.cfg"); // "/log/eps/settings/cfg"
+
+    char sIndex[10]; // sIndex = c string index
+    char sIndexP1[10]; // sIndex.toInt() + 1
+    char sMaxFileSize[10];
+    char sMaxDirSize[10];
+    char sDoOverwrite[1];
+
+    // Open the settings file and update numbers.
+    FILE *settings = NULL;
+    settings = fopen(settingsFile, "r+");
+
+    if (settings = NULL){
+        return SAVE_OPEN;
+    }
+
+    // Gets the index, maxSizes, and doOverwrite..
+    if (fgets(sIndex, 10, (FILE*)settings) == NULL
+    || fgets(sMaxFileSize, 10, (FILE*)settings) == NULL
+    || fgets(sMaxDirSize, 10, (FILE*)settings) == NULL
+    || fgets(sDoOverwrite, 1, (FILE*)settings == NULL)){
+        return SAVE_ACCESS;
+    }
+
+    // Converts the retrieved string to an int.
+    int maxFileSize = atoi(sMaxFileSize);
+    int maxDirSize = atoi(sMaxDirSize);
+    int doOverwrite = atoi(sDoOverwrite);
+    int index = atoi(sIndex);
+
+    fclose(settings);
+
+    // Adjust values as desired.
+    maxFileSize = size_B;
+
+    // Reopen the file in w-mode, clearing the file contents.
+    settings = fopen(settingsFile, "w");
+
+    fclose(settings);
 }
 
 // Sets the maximum log directory size, will overwrite logs at dirSize/logSize logs. 
-int dlgr_setMaxDirSize(int size_KB){
+int dlgr_setMaxDirSize(int size_B, char* directory){
     // Overwrite the value of line 3.
-    FILE* save = NULL;
-    save = fopen("/sav/values.sav", "r+");
-    if (save = NULL){
+    FILE* settings = NULL;
+    settings = fopen("/sav/values.sav", "r+");
+    if (settings = NULL){
         return SAVE_OPEN;
     }
 
     // TODO: Overwrite value.
 
-    fclose(save);
+    fclose(settings);
 }
 
 // 0 to ignore max directory size and never overwrite, 1 to behave
-int dlgr_doOverwrite(int overwrite){
+int dlgr_doOverwrite(int overwrite, char* directory){
     // Overwrite the value of line 4.
-    FILE* save = NULL;
-    save = fopen("/sav/values.sav", "r+");
-    if (save = NULL){
+    FILE* settings = NULL;
+    settings = fopen("/sav/values.sav", "r+");
+    if (settings = NULL){
         return SAVE_OPEN;
     }
 
     // TODO: Overwrite value.
 
-    fclose(save);
+    fclose(settings);
 }
+*/

@@ -15,7 +15,14 @@
 enum ERROR{
     SAVE_OPEN = -1,
     DATA_OPEN = -2,
-    SAVE_ACCESS = -3
+    SAVE_ACCESS = -3,
+    SET_SETTING = -4
+};
+
+enum SETTING{
+    MAX_FILE_SIZE = 0,
+    MAX_DIR_SIZE,
+    DO_OVERWRITE
 };
 
 // TODO: Will need a lock in implementation
@@ -23,15 +30,21 @@ enum ERROR{
 int dlgr_logData(int size, int* data);
 
 // TODO: WIP
-int* retrieveData();
+int* dlgr_retrieveData();
 
+// Replacement for dlgr_setMaxFileSize, dlgr_setMaxDirSize, and dlgr_doOverwrite.
+// Use the setting_t to determine which setting gets set.
+int dlgr_editSettings(int value, int setting, char* directory);
+
+/* Deprecated by dlgr_editSettings(...)
 // Sets the maximum log size, in bytes, will create a new log file when this is hit. 
-int dlgr_setMaxLogSize(int size_KB);
+int dlgr_setMaxFileSize(int size_B, char* directory);
 
 // Sets the maximum log directory size, will overwrite logs at dirSize/logSize logs. 
-int dlgr_setMaxDirSize(int size_KB);
+int dlgr_setMaxDirSize(int size_B, char* directory);
 
 // 0 to ignore max directory size and never overwrite, 1 to behave
-int dlgr_doOverwrite(int overwrite);
+int dlgr_doOverwrite(int overwrite, char* directory);
+*/
 
 #endif // DATALOGGER_EXTERN_H
