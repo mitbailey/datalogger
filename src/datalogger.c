@@ -14,7 +14,8 @@
 #include "include/datalogger.h"
 #include "include/datalogger_extern.h"
 
-/* datalogger_directory
+// Example Directory
+/* datalogger
  * - log
  * - - eps
  * - - - settings.cfg
@@ -30,27 +31,38 @@
  * - - - 1.dat
  */
 
-/*
-.cfg file format
-BEGIN
-1. log index
-2. max file size (KB)
-3. max dir size (KB)
-4. do overwrite
+// settings.cfg file format
+/* 1. log index
+ * 2. max file size (Bytes)
+ * 3. max dir size (Bytes)
+ * 4. do overwrite
+ */
 
-*/
-
-// data: .data files
-// settings: Datalogger's personal variable repository.
-// directory: c-string, likely the name of the calling module
-// Note: Directory will probably be accessed some other way eventually.
+/**
+ * @brief Logs passed data to a file.
+ * 
+ * Logs the data passed to it as binary in a .dat file, which is
+ * located in /log/<MODULE>/. It follows the settings set in
+ * /log/<MODULE>/settings.cfg, which typically means it will
+ * create a new .dat file when the file size exceeds maxFileSize
+ * (line 2) and will begin overwriting old .dat files when the 
+ * directory size exceeds maxDirSize (line 3). It also stores
+ * the .dat file's index for naming (ie: 42.dat).
+ * 
+ * @param size The size of the data to be logged.
+ * @param dataIn The data to be logged.
+ * @param directory The calling module's name, a unique directory.
+ * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
+ */
 int logData(int size, int* dataIn, char* directory){
-    // Constructs the settings.cfg directory into settingsFile.
+    // Note: Directory will probably be accessed some other way eventually.
+
+    // Constructs the settings.cfg directory => settingsFile.
     char settingsFile[20] = "/log/";
     strcat(settingsFile, directory); // "/log/eps"
     strcat(settingsFile, "/settings.cfg"); // "/log/eps/settings/cfg"
 
-    // Index will get the data file number, can only accept up to 999.
+    // Index will get the data file number.
     char sIndex[10]; // sIndex = c string index
     char sIndexP1[10]; // sIndex.toInt() + 1
     char sMaxFileSize[10];
@@ -101,6 +113,7 @@ int logData(int size, int* dataIn, char* directory){
     // Remove the old file, if it exists.
     // remove(dataFileOld);
 
+    // Open the current data (.dat) file in append-mode.
     FILE *data = NULL;
     data = fopen(dataFile, "a");
 
@@ -108,6 +121,7 @@ int logData(int size, int* dataIn, char* directory){
         return DATA_OPEN;
     }
 
+    // Fetch the current file size.
     long int fileSize = ftell(dataFile);
 
     // This file has reached its maximum size.
@@ -138,6 +152,8 @@ int logData(int size, int* dataIn, char* directory){
 
     fclose(settings);
     fclose(data);
+
+    return 1;
 }
 
 // TODO: WIP
@@ -147,8 +163,18 @@ int* retrieveData(){
 
 // TODO: set max etc can probably be condensed into a edit settings function... ?
 
+/**
+ * @brief Used to edit settings.cfg.
+ * 
+ * This function sets a setting to a value within a module's own datalogger directory.
+ * 
+ * @param value The value to be written.
+ * @param setting The setting to edit (see: datalogger_extern.h's SETTING enum).
+ * @param directory The calling module's name, a unique directory.
+ * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
+ */
 int dlgr_editSettings(int value, int setting, char* directory){
-    // TODO: Overwrite value.
+    // Overwrite value.
     // Open settings.cfg
     // Retrieve data
     // Close settings.cfg
