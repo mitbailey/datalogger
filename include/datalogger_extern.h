@@ -22,6 +22,9 @@ enum ERROR{
 // Writes the passed data to a binary log file.
 int dlgr_logData(int size, int* data);
 
+// TODO: WIP
+int* retrieveData();
+
 // Sets the maximum log size, in bytes, will create a new log file when this is hit. 
 int dlgr_setMaxLogSize(int size_KB);
 
