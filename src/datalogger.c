@@ -2,7 +2,7 @@
  * @file datalogger.c
  * @author Mit Bailey (mitbailey99@gmail.com)
  * @brief Implementation of datalogger functions.
- * @version 0.3
+ * @version 0.4
  * @date 2021-04-07
  * 
  * @copyright Copyright (c) 2021
@@ -16,6 +16,8 @@
 #include "include/datalogger.h"
 #include "include/datalogger_extern.h"
 
+char* FBEGIN = {'F', 'B', 'E', 'G', 'I', 'N'};
+char* FEND = {'F', 'E', 'N', 'D'};
 uint64_t logIndex;
 settings_t settingsLoc[1];
 
@@ -41,10 +43,9 @@ settings_t settingsLoc[1];
 // settings.cfg file format (index moved to index.inf)
 /* 1. max file size (Bytes)
  * 2. max dir size (Bytes)
- * 3. do overwrite
  */
 
-// char* directory is just a placeholder. Later, we will get the
+// char* moduleName is just a placeholder. Later, we will get the
 // module names from somewhere else.
 
 /**
@@ -53,10 +54,10 @@ settings_t settingsLoc[1];
  * If files such as index.inf exist, init will set dlgr's variables
  * to match. If they do not exist, init will create them.
  * 
- * @param directory Temp. variable, assumption is this is a module name such as "eps".
+ * @param moduleName Temp. variable, assumption is this is a module name such as "eps".
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_init(char *directory)
+int dlgr_init(char *moduleName)
 {
     if (settingsLoc == NULL)
     {
@@ -69,7 +70,7 @@ int dlgr_init(char *directory)
 
     // Creates index.inf
     char indexFile[20] = "log/";
-    strcat(indexFile, directory);
+    strcat(indexFile, moduleName);
     strcat(indexFile, "/index.inf");
     FILE *index = NULL;
 
@@ -93,7 +94,7 @@ int dlgr_init(char *directory)
 
     // Creates an initial log file, 0.dat
     char dataFile[20] = "log/";
-    strcat(dataFile, directory);
+    strcat(dataFile, moduleName);
     strcat(dataFile, "/0.log");
     FILE *data = NULL;
 
@@ -110,7 +111,7 @@ int dlgr_init(char *directory)
     // Creates an initial settings file, or syncs settings
     // if one already exists.
     char settingsFile[20] = "log/";
-    strcat(settingsFile, directory);
+    strcat(settingsFile, moduleName);
     strcat(settingsFile, "/0.log");
     FILE *settings = NULL;
 
@@ -126,10 +127,9 @@ int dlgr_init(char *directory)
 
         char sMaxFileSize[10];
         char sMaxDirSize[10];
-        char sDoOverwrite[1];
 
-        // Gets the index, maxSizes, and doOverwrite..
-        if (fgets(sMaxFileSize, 10, (FILE *)settings) == NULL || fgets(sMaxDirSize, 10, (FILE *)settings) == NULL || fgets(sDoOverwrite, 1, (FILE *)settings) == NULL)
+        // Gets the index, maxSizes
+        if (fgets(sMaxFileSize, 10, (FILE *)settings) == NULL || fgets(sMaxDirSize, 10, (FILE *)settings) == NULL)
         {
             return ERR_SETTINGS_ACCESS;
         }
@@ -137,7 +137,6 @@ int dlgr_init(char *directory)
         // Converts the retrieved string to an int.
         settingsLoc->maxFileSize = atoi(sMaxFileSize);
         settingsLoc->maxDirSize = atoi(sMaxDirSize);
-        settingsLoc->doOverwrite = atoi(sDoOverwrite);
 
         fclose(settings);
     }
@@ -160,37 +159,38 @@ int dlgr_init(char *directory)
  * located in /log/<MODULE>/. It follows the settings set in
  * /log/<MODULE>/settings.cfg, which typically means it will
  * create a new .dat file when the file size exceeds maxFileSize
- * (line 2) and will begin overwriting old .dat files when the 
+ * (line 2) and will begin deleting old .dat files when the 
  * directory size exceeds maxDirSize (line 3). It also stores
- * the .dat file's index for naming (ie: 42.dat).
+ * the .dat file's index for naming (ie: 42.dat). Encapsulates
+ * each section of written data between FBEGIN and FEND.
  * 
  * @param size The size of the data to be logged.
  * @param dataIn The data to be logged.
- * @param directory The calling module's name, a unique directory.
+ * @param moduleName The calling module's name, a unique directory.
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_logData(int size, int *dataIn, char *directory)
+int dlgr_logData(int size, void *dataIn, char *moduleName)
 {
     // Note: Directory will probably be accessed some other way eventually.
 
     // Constructs the index.inf directory => indexFile.
     char indexFile[20] = "log/";
-    strcat(indexFile, directory);   
+    strcat(indexFile, moduleName);   
     strcat(indexFile, "/index.inf");
 
     // Constructs the n.dat directory.
     char dataFile[20] = "log/";
-    strcat(dataFile, directory); // "/log/eps"
+    strcat(dataFile, moduleName); // "/log/eps"
     strcat(dataFile, "/");       // "/log/eps/"
     strcat(dataFile, logIndex);  // "/log/eps/42"
     strcat(dataFile, ".dat");    // "/log/eps/42.dat"
 
     // Constructs the n+1.dat directory.
-    char dataFileOld[20] = "log/";
-    strcat(dataFileOld, directory);    // "/log/eps"
-    strcat(dataFileOld, "/");          // "/log/eps/"
-    strcat(dataFileOld, logIndex + 1); // "/log/eps/43"
-    strcat(dataFileOld, ".dat");       // "/log/eps/43.dat"
+    char dataFileNew[20] = "log/";
+    strcat(dataFileNew, moduleName);    // "/log/eps"
+    strcat(dataFileNew, "/");          // "/log/eps/"
+    strcat(dataFileNew, logIndex + 1); // "/log/eps/43"
+    strcat(dataFileNew, ".dat");       // "/log/eps/43.dat"
 
     // Open the current data (.dat) file in append-mode.
     FILE *data = NULL;
@@ -220,20 +220,35 @@ int dlgr_logData(int size, int *dataIn, char *directory)
         // Iterate the index.
         logIndex++;
 
-        // Rewrite the entire file.
+        // Rewrite the index file.
         fprintf(index, "%d\n", logIndex);
 
         fclose(data);
         fclose(index);
         sync();
-        data = fopen(dataFileOld, "wb"); // This will overwrite the old file.
+
+        // Replace data pointer to the new data file.
+        data = fopen(dataFileNew, "wb");
+
+        // Delete an old file.
+        char dataFileOld[20] = "log/";
+        strcat(dataFileOld, moduleName);
+        strcat(dataFileOld, "/");
+        strcat(dataFileOld, logIndex - (settingsLoc->maxDirSize/settingsLoc->maxFileSize));
+        strcat(dataFileOld, ".dat");
+
+        if (remove(dataFileOld) != 0) {
+            return ERR_DATA_REMOVE;
+        }
     }
 
     // TODO: Here is where we will write the passed data to the now opened .data file.
     // size_t fread(void *ptr, size_t size_of_elements, size_t number_of_elements, FILE *a_file);
     // size_t fwrite(const void *ptr, size_t size_of_elements, size_t number_of_elements, FILE *a_file);
 
-    fwrite(dataIn, sizeof(data), 1, data);
+    fwrite(FBEGIN, 6, 1, data);
+    fwrite(dataIn, sizeof(dataIn), 1, data);
+    fwrite(FEND, 4, 1, data);
 
     fclose(data);
     sync();
@@ -243,6 +258,13 @@ int dlgr_logData(int size, int *dataIn, char *directory)
 // TODO: WIP
 int *dlgr_retrieveData()
 {
+    /*
+     * This should return sets of data from the binary .dat files irregardless of what file its in,
+     * for as much as is requested.
+     *
+     */
+
+    return 1;
 }
 
 // TODO: set max etc can probably be condensed into a edit settings function... ?
@@ -284,16 +306,8 @@ int dlgr_editSettings(int value, int setting, char *directory)
         settingsLoc->maxDirSize = value;
 
         break;
-    case DO_OVERWRITE:
-        // Psuedo-boolean value not binary.
-        if (value != 0 && value != 1)
-        {
-            return ERR_SET_SETTING;
-        }
-
-        settingsLoc->doOverwrite = value;
-
-        break;
+    default:
+        return ERR_DEFAULT;
     }
 
     // Constructs the settings.cfg directory into settingsFile.
@@ -313,7 +327,6 @@ int dlgr_editSettings(int value, int setting, char *directory)
     // Write everything back into the file.
     fprintf(settings, "%d\n", settingsLoc->maxFileSize);
     fprintf(settings, "%d\n", settingsLoc->maxDirSize);
-    fprintf(settings, "%d\n", settingsLoc->doOverwrite);
 
     fclose(settings);
     sync();

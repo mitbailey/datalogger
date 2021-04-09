@@ -18,7 +18,9 @@ enum ERROR
     ERR_SETTINGS_OPEN = -2,
     ERR_DATA_OPEN = -3,
     ERR_SETTINGS_ACCESS = -4,
-    ERR_SET_SETTING = -5
+    ERR_SET_SETTING = -5,
+    ERR_DATA_REMOVE = -6,
+    ERR_DEFAULT
 };
 
 enum SETTING
@@ -30,13 +32,13 @@ enum SETTING
 
 // TODO: May need a lock in implementation
 // Writes the passed data to a binary log file.
-int dlgr_logData(int size, int *data, char *directory);
+int dlgr_logData(int size, void *data, char *moduleName);
 
 // TODO: WIP
 int *dlgr_retrieveData();
 
 // Replacement for dlgr_setMaxFileSize, dlgr_setMaxDirSize, and dlgr_doOverwrite.
 // Use the setting_t to determine which setting gets set.
-int dlgr_editSettings(int value, int setting, char *directory);
+int dlgr_editSettings(int value, int setting, char *moduleName);
 
 #endif // DATALOGGER_EXTERN_H

@@ -14,13 +14,12 @@
 
 // File and directories cannot exceed these limits.
 #define SIZE_FILE_HARDLIMIT 1048576 // 1MB
-#define SIZE_DIR_HARDLIMIT 52428800  // 50MB
+#define SIZE_DIR_HARDLIMIT 16777216  // 16MB
 
 typedef struct SETTINGS
 {
     int maxFileSize;
     int maxDirSize;
-    int doOverwrite;
 } settings_t;
 
 // Initialization
