@@ -25,6 +25,7 @@ char *FBEGIN = {'F', 'B', 'E', 'G', 'I', 'N'};
 char *FEND = {'F', 'E', 'N', 'D'};
 uint64_t logIndex;
 settings_t settingsLoc[1];
+ssize_t moduleLogSize;
 
 // Example Directory
 /* datalogger
@@ -64,6 +65,9 @@ settings_t settingsLoc[1];
  */
 int dlgr_init(char *moduleName)
 {
+    // Set the module log size to -1 until we know how large one is.
+    moduleLogSize = -1;
+
     if (settingsLoc == NULL)
     {
         return ERR_INIT;
@@ -160,7 +164,7 @@ int dlgr_init(char *moduleName)
  * 
  * Logs the data passed to it as binary in a .dat file, which is
  * located in /log/<MODULE>/. It follows the settings set in
- * /log/<MODULE>/settings.cfg, which typically means it will
+ * /log/<MODULE>/settings.cfg, which means it will
  * create a new .dat file when the file size exceeds maxFileSize
  * (line 2) and will begin deleting old .dat files when the 
  * directory size exceeds maxDirSize (line 3). It also stores
@@ -172,9 +176,12 @@ int dlgr_init(char *moduleName)
  * @param moduleName The calling module's name, a unique directory.
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_logData(int size, void *dataIn, char *moduleName)
+int dlgr_logData(ssize_t size, void *dataIn, char *moduleName)
 {
     // Note: Directory will probably be accessed some other way eventually.
+
+    // Set the size of this module's log.
+    moduleLogSize = size;
 
     // Constructs the index.inf directory => indexFile.
     char indexFile[20] = "log/";
@@ -246,10 +253,7 @@ int dlgr_logData(int size, void *dataIn, char *moduleName)
         }
     }
 
-    // TODO: Here is where we will write the passed data to the now opened .data file.
-    // size_t fread(void *ptr, size_t size_of_elements, size_t number_of_elements, FILE *a_file);
-    // size_t fwrite(const void *ptr, size_t size_of_elements, size_t number_of_elements, FILE *a_file);
-
+    // Write FBEGIN, the data, and then FEND to the binary .dat file.
     fwrite(FBEGIN, 6, 1, data);
     fwrite(dataIn, sizeof(dataIn), 1, data);
     fwrite(FEND, 4, 1, data);
@@ -260,7 +264,8 @@ int dlgr_logData(int size, void *dataIn, char *moduleName)
 }
 
 // TODO: WIP
-int dlgr_retrieveData(int numRequestedStructs, char *moduleName)
+// Stores the data into output.
+int dlgr_retrieveData(char* output, int numRequestedLogs, char *moduleName)
 {
     /*
      * This should return sets of data from the binary .dat files irregardless of what file its in,
@@ -277,6 +282,11 @@ int dlgr_retrieveData(int numRequestedStructs, char *moduleName)
      * < Some module-specific data of size n >
      * FEND
      */
+    
+    // Check if the module log size is already defined. If not, nothing has been logged yet.
+    if (moduleLogSize < 0){
+        return ERR_LOG_SIZE;
+    }
 
     // First, construct the directories.
     char dataFile[20] = "log/";
@@ -328,44 +338,112 @@ int dlgr_retrieveData(int numRequestedStructs, char *moduleName)
     // 1. Find the address of the first occurrence of "FEND".
     // 2. Subtract the address of the c-string from the address of FEND to get the
     //    size of a structure.
-    // 3. Use memcopy to extract structSize bytes at every FBEGIN+FBEGIN_SIZE
-    int iFEND = dlgr_indexOf(buffer, fileSize, FEND, (ssize_t)4);
-    char *pFEND = buffer + iFEND;
+    // 3. Use memcopy to extract logSize bytes at every FBEGIN+FBEGIN_SIZE
 
-    // Set the structSize
-    ssize_t structSize = pFEND - (buffer + FBEGIN_SIZE);
+    // ! No longer needed.
+    //int iFEND = dlgr_indexOf(buffer, fileSize, FEND, (ssize_t)4);
+    //char *pFEND = buffer + iFEND;
 
+    // Set the logSize
+    //ssize_t logSize = pFEND - (buffer + FBEGIN_SIZE);
+
+    // ! No longer necessary, as memory management has been offloaded to the caller.
     // Create and allocate memory for an output c-string.
-    char *output = NULL;
-    output = malloc((FBEGIN_SIZE + FEND_SIZE + structSize) * numRequestedStructs);
+    //char *output = NULL;
+    //output = malloc((FBEGIN_SIZE + FEND_SIZE + logSize) * numRequestedLogs);
 
-    if (output == NULL)
-    {
-        return ERR_MALLOC;
-    }
+    //if (output == NULL)
+    //{
+    //    return ERR_MALLOC;
+    //}
 
     // Create a cursor to mark our current position in the buffer. Pull it one structure from the back.
     char *bufferCursor = buffer + fileSize;
-    bufferCursor -= structSize - FBEGIN_SIZE + FEND_SIZE;
+    bufferCursor -= moduleLogSize - FBEGIN_SIZE + FEND_SIZE;
 
     // To keep track of the number of structures we've added to the output.
     int numReadStructs = 0;
 
     // If we havent reached the beginning of the buffer, keep getting structures.
-    while (buffer - bufferCursor != 0 && numReadStructs < numRequestedStructs)
+    while (buffer - bufferCursor != 0 && numReadStructs < numRequestedLogs)
     {
         // Copies one structure to the output. Contains delimiters and trace amounts of tree nuts.
-        memcpy(output, buffer, structSize + FBEGIN_SIZE + FEND_SIZE);
+        memcpy(output, buffer, moduleLogSize + FBEGIN_SIZE + FEND_SIZE);
         numReadStructs++;
     } // TODO: Currently we get here if the requested amount > amount in the file...need to search next file.
 
-    // TODO: Frees may need to move.
     fclose(data);
     free(buffer);
-    free(output);
+    //free(output);
 
     // TODO: Should return a character array, specifically the output buffer.
     return 1;
+}
+
+// Returns amount of bytes Z necessary to allocate per X logs from Y module.
+// This is for if you know your own log size, I'll tell you how much space you'll need.
+ssize_t dlgr_queryMemorySize (ssize_t logSize, int numRequestedLogs){
+    return numRequestedLogs * (logSize + FBEGIN_SIZE + FEND_SIZE);
+}
+
+// If you don't know the size of your own logsize, use this.
+// It'll find a log, get the size, and then tell you how much space you need.
+ssize_t dlgr_getMemorySize (int numRequestedLogs, char* moduleName){
+    
+    if (moduleLogSize > 0) {
+        return numRequestedLogs * (moduleLogSize + FBEGIN_SIZE + FEND_SIZE);
+    }    
+
+    // Should never get here...leaving it for now.
+    char dataFile[20] = "log/";
+    strcat(dataFile, moduleName);
+    strcat(dataFile, "/");
+    strcat(dataFile, logIndex);
+    strcat(dataFile, ".dat");
+
+    FILE *data = NULL;
+    data = fopen(dataFile, "rb");
+
+    if (data == NULL)
+    {
+        return ERR_DATA_OPEN;
+    }
+
+    // Find the total size of the .dat file.
+    fseek(data, 0, SEEK_END);
+    ssize_t fileSize = ftell(data);
+    fseek(data, 0, SEEK_SET);
+
+    // Create a memory buffer of size fileSize
+    char *buffer = NULL;
+    buffer = malloc(fileSize + 1);
+
+    if (buffer == NULL)
+    {
+        return ERR_MALLOC;
+    }
+
+    // Read the entire file into memory buffer. One byte a time for sizeof(buffer) bytes.
+    if (fread(buffer, 0x1, fileSize, data) != 1)
+    {
+        return ERR_DATA_READ;
+    }
+
+    // Determine what the size of one structure is.
+    // 1. Find the address of the first occurrence of "FEND".
+    // 2. Subtract the address of the c-string from the address of FEND to get the
+    //    size of a structure.
+    // 3. Use memcopy to extract logSize bytes at every FBEGIN+FBEGIN_SIZE
+    int iFEND = dlgr_indexOf(buffer, fileSize, FEND, (ssize_t)4);
+    char *pFEND = buffer + iFEND;
+
+    // Set the logSize
+    ssize_t logSize = pFEND - (buffer + FBEGIN_SIZE);
+
+    fclose(data);
+    free(buffer);
+
+    return numRequestedLogs * (logSize + FBEGIN_SIZE + FEND_SIZE);    
 }
 
 /**
@@ -440,7 +518,18 @@ void dlgr_destroy()
 
 // Helper functions
 
-// Returns the index of the beginning of token in buffer is present, -1 if it fails.
+/**
+ * @brief Returns the index of the token within buffer.
+ * 
+ * Searches for the first instance of token within buffer and returns the index of
+ * the first character.
+ * 
+ * @param buffer The character array to be searched.
+ * @param bufferSize The size of the buffer.
+ * @param token The token to search for within buffer.
+ * @param tokenSize The size of the token.
+ * @return int Index of the token within buffer on success, ERR_MISC on failure.
+ */
 int dlgr_indexOf(char *buffer, ssize_t bufferSize, char *token, ssize_t tokenSize)
 {
     int i = 0;
