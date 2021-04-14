@@ -14,20 +14,24 @@
 
 enum ERROR
 {
-    ERR_INIT = -1,
-    ERR_SETTINGS_OPEN = -2,
-    ERR_DATA_OPEN = -3,
-    ERR_SETTINGS_ACCESS = -4,
-    ERR_SET_SETTING = -5,
-    ERR_DATA_REMOVE = -6,
-    ERR_DEFAULT
+    ERR_INIT = -11,
+    ERR_SETTINGS_OPEN,
+    ERR_SETTINGS_ACCESS,
+    ERR_SETTINGS_SET,
+    ERR_DATA_OPEN,
+    ERR_DATA_REMOVE,
+    ERR_DATA_READ,
+    ERR_DEFAULT_CASE,
+    ERR_FILE_DNE,
+    ERR_MALLOC,
+    
+    ERR_MISC
 };
 
 enum SETTING
 {
     MAX_FILE_SIZE = 0,
-    MAX_DIR_SIZE,
-    DO_OVERWRITE
+    MAX_DIR_SIZE
 };
 
 // TODO: May need a lock in implementation
@@ -35,7 +39,7 @@ enum SETTING
 int dlgr_logData(int size, void *data, char *moduleName);
 
 // TODO: WIP
-int *dlgr_retrieveData();
+int *dlgr_retrieveData(int numElements, char* moduleName);
 
 // Replacement for dlgr_setMaxFileSize, dlgr_setMaxDirSize, and dlgr_doOverwrite.
 // Use the setting_t to determine which setting gets set.
