@@ -2,7 +2,7 @@
  * @file datalogger.c
  * @author Mit Bailey (mitbailey99@gmail.com)
  * @brief Implementation of datalogger functions.
- * @version 0.4
+ * @version 0.5
  * @date 2021-04-07
  * 
  * @copyright Copyright (c) 2021
@@ -24,7 +24,7 @@
 char *FBEGIN = {'F', 'B', 'E', 'G', 'I', 'N'};
 char *FEND = {'F', 'E', 'N', 'D'};
 uint64_t logIndex;
-settings_t settingsLoc[1];
+settings_t localSettings[1];
 ssize_t moduleLogSize;
 
 // Example Directory
@@ -33,6 +33,7 @@ ssize_t moduleLogSize;
  * - - eps
  * - - - settings.cfg
  * - - - index.inf
+ * - - - module.inf
  * - - - 0.dat
  * - - - 1.dat
  * - - - 2.dat
@@ -42,6 +43,7 @@ ssize_t moduleLogSize;
  * - - acs
  * - - - settings.cfg
  * - - - index.inf
+ * - - - module.inf
  * - - - 0.dat
  * - - - 1.dat
  */
@@ -68,7 +70,24 @@ int dlgr_init(char *moduleName)
     // Set the module log size to -1 until we know how large one is.
     moduleLogSize = -1;
 
-    if (settingsLoc == NULL)
+    // Get the size of this module's log if one was already written.
+    char moduleFile[20] = "log/";
+    strcat(moduleFile, moduleName);
+    strcat(moduleFile, "/module.inf");
+
+    FILE *modu = NULL;
+
+    char* sLogSize;
+    // If a module.inf file does not exist, create one and put in this module's log's size.
+    if (access(moduleFile, F_OK | R_OK) == 0){
+        modu = fopen(moduleFile, "r");
+        fgets(sLogSize, 20, (FILE *)index);
+        moduleLogSize = atoi(sLogSize);
+    }
+
+    fclose(modu);
+
+    if (localSettings == NULL)
     {
         return ERR_INIT;
     }
@@ -84,6 +103,8 @@ int dlgr_init(char *moduleName)
     FILE *index = NULL;
 
     // Note: access() returns 0 on success.
+    // If an index file exists, update our index to match.
+    // Otherwise, make an index file with index = 0.
     if (access(indexFile, F_OK | R_OK) == 0)
     {
         // An index file already exists.
@@ -115,8 +136,7 @@ int dlgr_init(char *moduleName)
         fclose(data);
     }
 
-    // Creates an initial settings file, or syncs settings
-    // if one already exists.
+    // Creates an initial settings file, or syncs localSettings if one already exists.
     char settingsFile[20] = "log/";
     strcat(settingsFile, moduleName);
     strcat(settingsFile, "/0.log");
@@ -142,8 +162,8 @@ int dlgr_init(char *moduleName)
         }
 
         // Converts the retrieved string to an int.
-        settingsLoc->maxFileSize = atoi(sMaxFileSize);
-        settingsLoc->maxDirSize = atoi(sMaxDirSize);
+        localSettings->maxFileSize = atoi(sMaxFileSize);
+        localSettings->maxDirSize = atoi(sMaxDirSize);
 
         fclose(settings);
     }
@@ -181,7 +201,26 @@ int dlgr_logData(ssize_t size, void *dataIn, char *moduleName)
     // Note: Directory will probably be accessed some other way eventually.
 
     // Set the size of this module's log.
-    moduleLogSize = size;
+    char moduleFile[20] = "log/";
+    strcat(moduleFile, moduleName);
+    strcat(moduleFile, "/module.inf");
+
+    FILE *modu = NULL;
+
+    // If a module.inf file does not exist, create one and put in this module's log's size.
+    if (access(moduleFile, F_OK | R_OK) != 0){
+        modu = fopen(moduleFile, "w");
+
+        if (modu = NULL)
+        {
+            return ERR_MODU_OPEN;
+        }
+
+        fprintf(moduleFile, "%d\n", size);
+        moduleLogSize = size;
+    }
+
+    fclose(modu);
 
     // Constructs the index.inf directory => indexFile.
     char indexFile[20] = "log/";
@@ -218,7 +257,7 @@ int dlgr_logData(ssize_t size, void *dataIn, char *moduleName)
     FILE *index = NULL;
     // This file has reached its maximum size.
     // Make a new one and iterate the index.
-    if (fileSize >= settingsLoc->maxFileSize)
+    if (fileSize >= localSettings->maxFileSize)
     { // 16KB
         index = fopen(indexFile, "w");
 
@@ -244,7 +283,7 @@ int dlgr_logData(ssize_t size, void *dataIn, char *moduleName)
         char dataFileOld[20] = "log/";
         strcat(dataFileOld, moduleName);
         strcat(dataFileOld, "/");
-        strcat(dataFileOld, logIndex - (settingsLoc->maxDirSize / settingsLoc->maxFileSize));
+        strcat(dataFileOld, logIndex - (localSettings->maxDirSize / localSettings->maxFileSize));
         strcat(dataFileOld, ".dat");
 
         if (remove(dataFileOld) != 0)
@@ -263,8 +302,19 @@ int dlgr_logData(ssize_t size, void *dataIn, char *moduleName)
     return 1;
 }
 
-// TODO: WIP
-// Stores the data into output.
+/**
+ * @brief Retrieves logged data.
+ * 
+ * Pulls information from binary .dat files and places it into output.
+ * Use dlgr_getMemorySize() or dlgr_queryMemorySize() to determine the amount
+ * of memory that needs to be allocated to store the number of logs that are
+ * being requested.
+ * 
+ * @param output The location in memory where the data will be stored.
+ * @param numRequestedLogs How many logs would you like?
+ * @param moduleName The name of the caller module.
+ * @return int Negative on error (see: datalogger_extern.h's ERROR enum), 1 on success.
+ */
 int dlgr_retrieveData(char* output, int numRequestedLogs, char *moduleName)
 {
     /*
@@ -282,17 +332,56 @@ int dlgr_retrieveData(char* output, int numRequestedLogs, char *moduleName)
      * < Some module-specific data of size n >
      * FEND
      */
-    
-    // Check if the module log size is already defined. If not, nothing has been logged yet.
+
+    // Check if the module log size is already defined. 
+    // If not, nothing has been logged yet, so we cannot retrieve.
     if (moduleLogSize < 0){
         return ERR_LOG_SIZE;
     }
+
+    // To keep track of the number of logged structures we've added to the output.
+    int numReadLogs = 0;
+    
+    // How many files we have to look 'back'.
+    int indexOffset = 0;
+
+    int errorCheck = 0;
+
+    // Where the magic happens.
+    while (numReadLogs < numRequestedLogs){
+        if(errorCheck = dlgr_retrieve(output, numRequestedLogs-numReadLogs, moduleName, indexOffset) < 0){
+            return errorCheck;
+        }
+        numReadLogs += errorCheck;
+        indexOffset++;
+    }
+    
+    // Check if we got the right amount of logs.
+    if (numReadLogs != numRequestedLogs){
+        return ERR_READ_NUM;
+    }
+
+    return 1;
+}
+
+/**
+ * @brief A helper function for dlgr_retrieveData
+ * 
+ * @param output A char* to store the output.
+ * @param numRequestedLogs The number of logs to be fetched.
+ * @param moduleName The name of the calling module.
+ * @param indexOffset Essentially, the number of files we've had to go through already.
+ * @return int The number of logs added to output.
+ */
+int dlgr_retrieve(char* output, int numRequestedLogs, char* moduleName, int indexOffset){
+
+    int numReadLogs = 0;
 
     // First, construct the directories.
     char dataFile[20] = "log/";
     strcat(dataFile, moduleName);
     strcat(dataFile, "/");
-    strcat(dataFile, logIndex);
+    strcat(dataFile, logIndex - indexOffset);
     strcat(dataFile, ".dat");
 
     FILE *data = NULL;
@@ -317,77 +406,51 @@ int dlgr_retrieveData(char* output, int numRequestedLogs, char *moduleName)
         return ERR_MALLOC;
     }
 
-    // We will receive a request for some amount of data.
-    // ASSUMING this is passed as the number of module-specific structures desired...
-    // 1. Find the size of a structure.
-    // 2. Go to EOF - (sizeof(structure) + FEND_SIZE)
-    // 3. Read sizeof(structure) worth of data
-    // 4. Move up the file (2*sizeof(structure) + FBEGIN_SIZE + FEND_SIZE)
-    // 5. Go to step 3, repeat until start of file OR read number of structures
-    // 6. If we still have more to read, get the previous file and repeat.
-
-    // fseek(data, -8, SEEK_CUR); <-- Brings us to 8 bytes before where we are now.
-
     // Read the entire file into memory buffer. One byte a time for sizeof(buffer) bytes.
     if (fread(buffer, 0x1, fileSize, data) != 1)
     {
         return ERR_DATA_READ;
     }
 
-    // Determine what the size of one structure is.
-    // 1. Find the address of the first occurrence of "FEND".
-    // 2. Subtract the address of the c-string from the address of FEND to get the
-    //    size of a structure.
-    // 3. Use memcopy to extract logSize bytes at every FBEGIN+FBEGIN_SIZE
-
-    // ! No longer needed.
-    //int iFEND = dlgr_indexOf(buffer, fileSize, FEND, (ssize_t)4);
-    //char *pFEND = buffer + iFEND;
-
-    // Set the logSize
-    //ssize_t logSize = pFEND - (buffer + FBEGIN_SIZE);
-
-    // ! No longer necessary, as memory management has been offloaded to the caller.
-    // Create and allocate memory for an output c-string.
-    //char *output = NULL;
-    //output = malloc((FBEGIN_SIZE + FEND_SIZE + logSize) * numRequestedLogs);
-
-    //if (output == NULL)
-    //{
-    //    return ERR_MALLOC;
-    //}
-
     // Create a cursor to mark our current position in the buffer. Pull it one structure from the back.
     char *bufferCursor = buffer + fileSize;
     bufferCursor -= moduleLogSize - FBEGIN_SIZE + FEND_SIZE;
 
-    // To keep track of the number of structures we've added to the output.
-    int numReadStructs = 0;
-
     // If we havent reached the beginning of the buffer, keep getting structures.
-    while (buffer - bufferCursor != 0 && numReadStructs < numRequestedLogs)
+    while (buffer - bufferCursor != 0 && numReadLogs < numRequestedLogs)
     {
         // Copies one structure to the output. Contains delimiters and trace amounts of tree nuts.
         memcpy(output, buffer, moduleLogSize + FBEGIN_SIZE + FEND_SIZE);
-        numReadStructs++;
-    } // TODO: Currently we get here if the requested amount > amount in the file...need to search next file.
+        numReadLogs++;
+    }
 
     fclose(data);
     free(buffer);
-    //free(output);
-
-    // TODO: Should return a character array, specifically the output buffer.
-    return 1;
 }
 
-// Returns amount of bytes Z necessary to allocate per X logs from Y module.
-// This is for if you know your own log size, I'll tell you how much space you'll need.
+/**
+ * @brief Provides the memory size necessary to store some number of logs.
+ * 
+ * Use this if you know the size of a single log.
+ * 
+ * @param logSize The size of a single log structure.
+ * @param numRequestedLogs The number of logs that will be requested.
+ * @return ssize_t The size required to store n-logs.
+ */
 ssize_t dlgr_queryMemorySize (ssize_t logSize, int numRequestedLogs){
     return numRequestedLogs * (logSize + FBEGIN_SIZE + FEND_SIZE);
 }
 
-// If you don't know the size of your own logsize, use this.
-// It'll find a log, get the size, and then tell you how much space you need.
+/**
+ * @brief Provides the memory size necessary to store some number of logs.
+ * 
+ * Use this if you do not know the size of a log. This function will try to
+ * figure it out itself.
+ * 
+ * @param numRequestedLogs The number of logs that will be requested.
+ * @param moduleName The name of the calling module.
+ * @return ssize_t Size of memory needed.
+ */
 ssize_t dlgr_getMemorySize (int numRequestedLogs, char* moduleName){
     
     if (moduleLogSize > 0) {
@@ -458,10 +521,10 @@ ssize_t dlgr_getMemorySize (int numRequestedLogs, char* moduleName){
  */
 int dlgr_editSettings(int value, int setting, char *directory)
 {
-    // Change settingsLoc values.
+    // Change localSettings values.
     // Overwrite settings.cfg file and write new values in.
 
-    // Change settingsLoc values.
+    // Change localSettings values.
     switch (setting)
     {
     case MAX_FILE_SIZE:
@@ -470,7 +533,7 @@ int dlgr_editSettings(int value, int setting, char *directory)
             return ERR_SETTINGS_SET;
         }
 
-        settingsLoc->maxFileSize = value;
+        localSettings->maxFileSize = value;
 
         break;
     case MAX_DIR_SIZE:
@@ -480,7 +543,7 @@ int dlgr_editSettings(int value, int setting, char *directory)
             return ERR_SETTINGS_SET;
         }
 
-        settingsLoc->maxDirSize = value;
+        localSettings->maxDirSize = value;
 
         break;
     default:
@@ -502,8 +565,8 @@ int dlgr_editSettings(int value, int setting, char *directory)
     }
 
     // Write everything back into the file.
-    fprintf(settings, "%d\n", settingsLoc->maxFileSize);
-    fprintf(settings, "%d\n", settingsLoc->maxDirSize);
+    fprintf(settings, "%d\n", localSettings->maxFileSize);
+    fprintf(settings, "%d\n", localSettings->maxDirSize);
 
     fclose(settings);
     sync();
@@ -511,6 +574,10 @@ int dlgr_editSettings(int value, int setting, char *directory)
     return 1;
 }
 
+/**
+ * @brief WIP
+ * 
+ */
 void dlgr_destroy()
 {
     // TODO: Add frees

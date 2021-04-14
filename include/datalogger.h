@@ -2,7 +2,7 @@
  * @file datalogger.h
  * @author Mit Bailey (mitbailey99@gmail.com)
  * @brief Declarations of datalogger functions and structures.
- * @version 0.3
+ * @version 0.4
  * @date 2021-04-07
  * 
  * @copyright Copyright (c) 2021
@@ -24,6 +24,9 @@ typedef struct SETTINGS
 
 // Initialization
 int dlgr_init();
+
+// Helper function for dlgr_retrieveData()
+int dlgr_retrieve(char* output, int numRequestedLogs, char* moduleName, int indexOffset);
 
 // Destruction
 void dlgr_destroy();
