@@ -14,7 +14,7 @@
 
 // File and directories cannot exceed these limits.
 #define SIZE_FILE_HARDLIMIT 1048576 // 1MB
-#define SIZE_DIR_HARDLIMIT 16777216  // 16MB
+#define SIZE_DIR_HARDLIMIT 16777216 // 16MB
 
 typedef struct SETTINGS
 {
@@ -42,7 +42,7 @@ int dlgr_init();
  * @param indexOffset Essentially, the number of files we've had to go through already.
  * @return int The number of logs added to output.
  */
-int dlgr_retrieve(char* output, int numRequestedLogs, char* moduleName, int indexOffset);
+int dlgr_retrieve(char *moduleName, char *output, int numRequestedLogs, int indexOffset);
 
 /**
  * @brief Returns the index of the token within buffer.

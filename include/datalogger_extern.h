@@ -29,7 +29,11 @@ enum ERROR
     ERR_LOG_SIZE,
     ERR_MODU_OPEN,
     ERR_READ_NUM,
-    
+    ERR_INVALID_INPUT,
+    ERR_REREGISTER,
+    ERR_MAXLOGSIZE_NOT_SET, // <- If you see this you need to call dlgr_RegisterMaxLogSize(...)!
+    ERR_MAXLOGSIZE_EXCEEDED,
+
     ERR_MISC
 };
 
@@ -56,7 +60,7 @@ enum SETTING
  * @param moduleName The calling module's name, a unique directory.
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_logData(ssize_t size, void *data, char *moduleName);
+int dlgr_LogData(char *moduleName, ssize_t size, void *data);
 
 /**
  * @brief Retrieves logged data.
@@ -71,30 +75,21 @@ int dlgr_logData(ssize_t size, void *data, char *moduleName);
  * @param moduleName The name of the caller module.
  * @return int Negative on error (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_retrieveData(char* output, int numRequestedLogs, char *moduleName);
+int dlgr_RetrieveData(char *moduleName, char *output, int numRequestedLogs);
 
 /**
  * @brief Provides the memory size necessary to store some number of logs.
  * 
- * Use this if you know the size of a single log.
+ * Use this prior to allocating memory for a pointer in which you want
+ * retrieved logs to be stored. For instance, prior to calling dlgr_retrieveData(...)
+ * to retrieve 10 logs, you would first malloc whatever size dlgr_queryMemorySize(..., 10)
+ * returns.
  * 
- * @param logSize The size of a single log structure.
- * @param numRequestedLogs The number of logs that will be requested.
- * @return ssize_t The size required to store n-logs.
- */
-ssize_t dlgr_queryMemorySize (ssize_t logSize, int numRequestedLogs);
-
-/**
- * @brief Provides the memory size necessary to store some number of logs.
- * 
- * Use this if you do not know the size of a log. This function will try to
- * figure it out itself.
- * 
- * @param numRequestedLogs The number of logs that will be requested.
  * @param moduleName The name of the calling module.
- * @return ssize_t Size of memory needed.
+ * @param numRequestedLogs The number of logs that will be requested for retrieval.
+ * @return ssize_t The size necessary to store a number of logs.
  */
-ssize_t dlgr_getMemorySize (int numRequestedLogs, char* moduleName);
+ssize_t dlgr_QueryMemorySize(char *moduleName, int numRequestedLogs);
 
 /**
  * @brief Used to edit settings.cfg.
@@ -106,6 +101,19 @@ ssize_t dlgr_getMemorySize (int numRequestedLogs, char* moduleName);
  * @param directory The calling module's name, a unique directory.
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_editSettings(int value, int setting, char *moduleName);
+int dlgr_EditSettings(char *moduleName, int value, int setting);
+
+/**
+ * @brief Defines the maximum log size able to be logged by this module.
+ * 
+ * Requests to log data must be composed of a data structure of this size. Sizes
+ * smaller than max_size are allowable (datalogger provides padding). This
+ * value, once set, can not be changed.
+ * 
+ * @param moduleName The name of the calling module.
+ * @param max_size The maximum desired size for a log of data.
+ * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
+ */
+int dlgr_RegisterMaxLogSize(char *moduleName, ssize_t max_size);
 
 #endif // DATALOGGER_EXTERN_H
