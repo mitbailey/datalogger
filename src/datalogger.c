@@ -185,7 +185,7 @@ int dlgr_init(char *moduleName)
     return 1;
 }
 
-int dlgr_LogData(char *moduleName, ssize_t size, void *dataIn)
+int dlgr_log_data(char *moduleName, ssize_t size, void *dataIn)
 {
     // Note: Directory will probably be accessed some other way eventually.
 
@@ -284,7 +284,7 @@ int dlgr_LogData(char *moduleName, ssize_t size, void *dataIn)
     return 1;
 }
 
-int dlgr_RetrieveData(char *moduleName, char *output, int numRequestedLogs)
+int dlgr_retrieve_data(char *moduleName, char *output, int numRequestedLogs)
 {
     /*
      * This should return sets of data from the binary .dat files irregardless of what file its in,
@@ -395,12 +395,12 @@ int dlgr_retrieve(char *moduleName, char *output, int numRequestedLogs, int inde
     return numReadLogs;
 }
 
-ssize_t dlgr_QueryMemorySize(char *moduleName, int numRequestedLogs)
+ssize_t dlgr_query_memory_size(char *moduleName, int numRequestedLogs)
 {
     return numRequestedLogs * (moduleLogSize + FBEGIN_SIZE + FEND_SIZE);
 }
 
-int dlgr_EditSettings(char *moduleName, int value, int setting)
+int dlgr_edit_settings(char *moduleName, int value, int setting)
 {
     // Change localSettings values.
     // Overwrite settings.cfg file and write new values in.
@@ -456,7 +456,7 @@ int dlgr_EditSettings(char *moduleName, int value, int setting)
     return 1;
 }
 
-int dlgr_RegisterMaxLogSize(char *moduleName, ssize_t max_size)
+int dlgr_register_max_log_size(char *moduleName, ssize_t max_size)
 {
     if (max_size < 1)
     {
@@ -490,7 +490,7 @@ void dlgr_destroy()
 
 // Helper functions
 
-int dlgr_indexOf(char *buffer, ssize_t bufferSize, char *token, ssize_t tokenSize)
+int dlgr_index_of(char *buffer, ssize_t bufferSize, char *token, ssize_t tokenSize)
 {
     int i = 0;
     while (i + tokenSize < bufferSize)

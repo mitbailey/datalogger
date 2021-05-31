@@ -31,7 +31,7 @@ enum ERROR
     ERR_READ_NUM,
     ERR_INVALID_INPUT,
     ERR_REREGISTER,
-    ERR_MAXLOGSIZE_NOT_SET, // <- If you see this you need to call dlgr_RegisterMaxLogSize(...)!
+    ERR_MAXLOGSIZE_NOT_SET, // <- If you see this you need to call dlgr_register_max_log_size(...)!
     ERR_MAXLOGSIZE_EXCEEDED,
 
     ERR_MISC
@@ -60,7 +60,7 @@ enum SETTING
  * @param moduleName The calling module's name, a unique directory.
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_LogData(char *moduleName, ssize_t size, void *data);
+int dlgr_log_data(char *moduleName, ssize_t size, void *data);
 
 /**
  * @brief Retrieves logged data.
@@ -75,7 +75,7 @@ int dlgr_LogData(char *moduleName, ssize_t size, void *data);
  * @param moduleName The name of the caller module.
  * @return int Negative on error (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_RetrieveData(char *moduleName, char *output, int numRequestedLogs);
+int dlgr_retrieve_data(char *moduleName, char *output, int numRequestedLogs);
 
 /**
  * @brief Provides the memory size necessary to store some number of logs.
@@ -89,7 +89,7 @@ int dlgr_RetrieveData(char *moduleName, char *output, int numRequestedLogs);
  * @param numRequestedLogs The number of logs that will be requested for retrieval.
  * @return ssize_t The size necessary to store a number of logs.
  */
-ssize_t dlgr_QueryMemorySize(char *moduleName, int numRequestedLogs);
+ssize_t dlgr_query_memory_size(char *moduleName, int numRequestedLogs);
 
 /**
  * @brief Used to edit settings.cfg.
@@ -101,7 +101,7 @@ ssize_t dlgr_QueryMemorySize(char *moduleName, int numRequestedLogs);
  * @param directory The calling module's name, a unique directory.
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_EditSettings(char *moduleName, int value, int setting);
+int dlgr_edit_settings(char *moduleName, int value, int setting);
 
 /**
  * @brief Defines the maximum log size able to be logged by this module.
@@ -114,6 +114,6 @@ int dlgr_EditSettings(char *moduleName, int value, int setting);
  * @param max_size The maximum desired size for a log of data.
  * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_RegisterMaxLogSize(char *moduleName, ssize_t max_size);
+int dlgr_register_max_log_size(char *moduleName, ssize_t max_size);
 
 #endif // DATALOGGER_EXTERN_H

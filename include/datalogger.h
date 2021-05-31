@@ -56,7 +56,7 @@ int dlgr_retrieve(char *moduleName, char *output, int numRequestedLogs, int inde
  * @param tokenSize The size of the token.
  * @return int Index of the token within buffer on success, ERR_MISC on failure.
  */
-int dlgr_indexOf(char *buffer, ssize_t bufferSize, char *token, ssize_t tokenSize);
+int dlgr_index_of(char *buffer, ssize_t bufferSize, char *token, ssize_t tokenSize);
 
 /**
  * @brief WIP
