@@ -14,106 +14,50 @@
 #ifndef DATALOGGER_EXTERN_H
 #define DATALOGGER_EXTERN_H
 
-enum ERROR
-{
-    ERR_INIT = -20,
-    ERR_SETTINGS_OPEN,
-    ERR_SETTINGS_ACCESS,
-    ERR_SETTINGS_SET,
-    ERR_DATA_OPEN,
-    ERR_DATA_REMOVE,
-    ERR_DATA_READ,
-    ERR_DEFAULT_CASE,
-    ERR_FILE_DNE,
-    ERR_MALLOC,
-    ERR_LOG_SIZE,
-    ERR_MODU_OPEN,
-    ERR_READ_NUM,
-    ERR_INVALID_INPUT,
-    ERR_REREGISTER,
-    ERR_MAXLOGSIZE_NOT_SET, // <- If you see this you need to call dlgr_register_max_log_size(...)!
-    ERR_MAXLOGSIZE_EXCEEDED,
+// File and directories cannot exceed these limits.
+// #define MAX_FILE_SIZE 0x100000 // 1MB
+#define MAX_FILE_SIZE 0x100 // FOR DEBUG PURPOSES ONLY.
+#define MAX_FNAME_SIZE 0x80
+#define MAX_VAR_SIZE 0x100000
+#define MAX_LOG_SET_SIZE 0xC800000 // 200MB
 
-    ERR_MISC
-};
+// Note: varname should be formatted as modname_varname. dlgr_register(const char* var_name, void* var_data, int var_size);
+/**
+ * @brief 
+ * 
+ */
+#define DLGR_REGISTER(varname, varsize) dlgr_register(#varname, varsize)
 
-enum SETTING
-{
-    MAX_FILE_SIZE = 0,
-    MAX_DIR_SIZE
-};
+// #varname = "passed_varname", passed_varname_DATASIZE_LOGNUM == file to save log to 
+/**
+ * @brief 
+ * 
+ */
+#define DLGR_WRITE(varname) dlgr_write(#varname, &varname)
+
+// Returns the number of bytes necessary to perform a read.
+// Stores the varname and number for later.
+/**
+ * @brief 
+ * 
+ */
+#define DLGR_PRIME_READ(varname, number) dlgr_prime_read(#varname, number)
+
+// Will return if DLGR_PRIME_READ wasnt called prior, because
+// it unsets the varname and number that was set using _PRIME_.
+// Returns if the passed number*varname_size doesnt equal what was calculated / is expected due to the previously registered varname and number using DLGR_PRIME_READ().
+// STORAGEPTR MUST BE A POINTER TO VALID MEMORY
+// BYTES MUST BE THE NUMBER OF BYTES ALLOCATED FOR THIS READ
+/**
+ * @brief 
+ * 
+ */
+#define DLGR_PERFORM_READ(storageptr, bytes) dlgr_perform_read(storageptr, bytes)
 
 /**
- * @brief Logs passed data to a file.
+ * @brief Gets current log index for varname (not the number of logs, old ones may have been deleted).
  * 
- * Logs the data passed to it as binary in a .dat file, which is
- * located in /log/<MODULE>/. It follows the settings set in
- * /log/<MODULE>/settings.cfg, which means it will
- * create a new .dat file when the file size exceeds maxFileSize
- * (line 2) and will begin deleting old .dat files when the 
- * directory size exceeds maxDirSize (line 3). It also stores
- * the .dat file's index for naming (ie: 42.dat). Encapsulates
- * each section of written data between FBEGIN and FEND.
- * 
- * @param size The size of the data to be logged.
- * @param dataIn The data to be logged.
- * @param moduleName The calling module's name, a unique directory.
- * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
  */
-int dlgr_log_data(char *moduleName, ssize_t size, void *data);
-
-/**
- * @brief Retrieves logged data.
- * 
- * Pulls information from binary .dat files and places it into output.
- * Use dlgr_getMemorySize() or dlgr_queryMemorySize() to determine the amount
- * of memory that needs to be allocated to store the number of logs that are
- * being requested.
- * 
- * @param output The location in memory where the data will be stored.
- * @param numRequestedLogs How many logs would you like?
- * @param moduleName The name of the caller module.
- * @return int Negative on error (see: datalogger_extern.h's ERROR enum), 1 on success.
- */
-int dlgr_retrieve_data(char *moduleName, char *output, int numRequestedLogs);
-
-/**
- * @brief Provides the memory size necessary to store some number of logs.
- * 
- * Use this prior to allocating memory for a pointer in which you want
- * retrieved logs to be stored. For instance, prior to calling dlgr_retrieveData(...)
- * to retrieve 10 logs, you would first malloc whatever size dlgr_queryMemorySize(..., 10)
- * returns.
- * 
- * @param moduleName The name of the calling module.
- * @param numRequestedLogs The number of logs that will be requested for retrieval.
- * @return ssize_t The size necessary to store a number of logs.
- */
-ssize_t dlgr_query_memory_size(char *moduleName, int numRequestedLogs);
-
-/**
- * @brief Used to edit settings.cfg.
- * 
- * This function sets a setting to a value within a module's own datalogger directory.
- * 
- * @param value The value to be written.
- * @param setting The setting to edit (see: datalogger_extern.h's SETTING enum).
- * @param directory The calling module's name, a unique directory.
- * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
- */
-int dlgr_edit_settings(char *moduleName, int value, int setting);
-
-/**
- * @brief Defines the maximum log size able to be logged by this module.
- * 
- * Requests to log data must be composed of a data structure of this size. Sizes
- * smaller than max_size are allowable (datalogger provides padding). This
- * value, once set, can not be changed.
- * 
- * @param moduleName The name of the calling module.
- * @param max_size The maximum desired size for a log of data.
- * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
- */
-int dlgr_register_max_log_size(char *moduleName, ssize_t max_size);
+#define DLGR_GET_MAX_INDEX(varname) dlgr_get_log_index(#varname)
 
 #endif // DATALOGGER_EXTERN_H

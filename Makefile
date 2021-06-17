@@ -39,6 +39,10 @@ clean:
 	$(RM) $(TARGETOBJS)
 
 spotless: clean
+	$(RM) *.tmp
+	$(RM) *.idx
+	$(RM) *.reg
+	$(RM) *.log
 	$(RM) -R build
 	$(RM) -R docs
 

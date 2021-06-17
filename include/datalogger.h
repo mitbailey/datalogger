@@ -12,56 +12,81 @@
 #ifndef DATALOGGER_H
 #define DATALOGGER_H
 
-// File and directories cannot exceed these limits.
-#define SIZE_FILE_HARDLIMIT 1048576 // 1MB
-#define SIZE_DIR_HARDLIMIT 16777216 // 16MB
+#ifndef eprintf
+#define eprintf(str, ...)                                                    \
+    fprintf(stderr, "%s, %d: " str "\n", __func__, __LINE__, ##__VA_ARGS__); \
+    fflush(stderr);
+#endif
 
-typedef struct SETTINGS
-{
-    int maxFileSize;
-    int maxDirSize;
-} settings_t;
+#define CALCULATE_NEXT_FILE_SIZE ({fseek(var_log_f, 0, SEEK_END); log_file_size = ftell(var_log_f); fseek(var_log_f, 0, SEEK_SET); fclose(var_log_f); log_file_size + var_size;})
 
-/**
- * @brief Initializes the datalogger and its files.
- * 
- * If files such as index.inf exist, init will set dlgr's variables
- * to match. If they do not exist, init will create them.
- * 
- * @param moduleName Temp. variable, assumption is this is a module name such as "eps".
- * @return int Negative on failure (see: datalogger_extern.h's ERROR enum), 1 on success.
- */
-int dlgr_init();
+// #define CALCULATE_NEXT_FILE_SIZE ({struct stat stbuf[1]; stat(fname_buf, stbuf); stbuf->st_size;})
 
 /**
- * @brief A helper function for dlgr_retrieveData
+ * @brief INTERNAL USE ONLY. Registers named data with a byte-size.
  * 
- * @param output A char* to store the output.
- * @param numRequestedLogs The number of logs to be fetched.
- * @param moduleName The name of the calling module.
- * @param indexOffset Essentially, the number of files we've had to go through already.
- * @return int The number of logs added to output.
+ * Creates a var_name.reg file containing the var_size, and an initial var_name.idx file initially containing the value 0, and iterated each time a new log file is created for this var_name.
+ * 
+ * @param var_name The name to register.
+ * @param var_size The byte-size to register.
+ * @return int Negative on failure, 1 on success.
  */
-int dlgr_retrieve(char *moduleName, char *output, int numRequestedLogs, int indexOffset);
+int dlgr_register(const char* var_name, int var_size);
 
 /**
- * @brief Returns the index of the token within buffer.
+ * @brief INTERNAL USE ONLY. Writes named data to a log.
  * 
- * Searches for the first instance of token within buffer and returns the index of
- * the first character.
- * 
- * @param buffer The character array to be searched.
- * @param bufferSize The size of the buffer.
- * @param token The token to search for within buffer.
- * @param tokenSize The size of the token.
- * @return int Index of the token within buffer on success, ERR_MISC on failure.
+ * @param var_name The name of the data to store.
+ * @param data The data to store.
+ * @return int 
  */
-int dlgr_index_of(char *buffer, ssize_t bufferSize, char *token, ssize_t tokenSize);
+int dlgr_write(const char* var_name, void* data);
 
 /**
- * @brief WIP
+ * @brief INTERNAL USE ONLY. Returns the number of bytes needed to store a number of read named-data of some previously defined (by dlgr_register()) size.
  * 
+ * Failure modes include if var_name has not been previously registered.
+ * 
+ * @param var_name The name of the data to be read.
+ * @param number The number of these data chunks to be read.
+ * @return int Negative on failure, bytes required to store this data.
  */
-void dlgr_destroy();
+int dlgr_prime_read(const char* var_name, int number);
+
+/**
+ * @brief INTERNAL USE ONLY. Reads data from logs and stores it.
+ * 
+ * Failure modes include if dlgr_prime_read() was not called immediately prior. This is checked by seeing if number * primed_varname_size = primed_byte_size.
+ * 
+ * @param storage Where the read data will be stored. 
+ * @param number The number of data to be read (i.e. 'number'-many ints).
+ * @return int Negative on failure, positive on success.
+ */
+int dlgr_perform_read(void* storage, int number);
+
+/**
+ * @brief 
+ * 
+ * @param var_name 
+ * @param fname_buf_size 
+ * @return int 
+ */
+int dlgr_check_registration(const char* var_name, const int fname_buf_size);
+
+/**
+ * @brief INTERNAL USE ONLY. Returns the index of the current log.
+ * 
+ * @param var_name Name of the variable whose log index to check.
+ * @return int Negative on failure, log index on success.
+ */
+int dlgr_get_log_index(const char* var_name);
+
+/**
+ * @brief INTERNAL USE ONLY. Iterates the log index up by one.
+ * 
+ * @param var_name Name of the variable whose log index to iterate.
+ * @return int Negative on failure, new log index on success.
+ */
+int dlgr_iterate_log_index(const char* var_name);
 
 #endif // DATALOGGER_H
