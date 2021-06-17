@@ -224,6 +224,15 @@ int dlgr_write(const char* var_name, void* data){
     fclose(var_log_f);
     sync();
 
+    // Check if we need to delete an old file and do so.
+    const int max_logs = MAX_LOG_SET_SIZE / MAX_FILE_SIZE;
+    snprintf(fname_buf, fname_buf_size, "%s_%d.log", var_name, var_index - max_logs);
+    // eprintf("Checking #%d.", var_index - max_logs);
+    if ((var_index >= max_logs) && (access(fname_buf, F_OK | R_OK) == 0)) {
+        // eprintf("DELETING #%d.", var_index - max_logs);
+        remove(fname_buf);
+    }
+
     // eprintf("Write finished.");
     return 1;
 }

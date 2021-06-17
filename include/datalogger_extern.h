@@ -9,17 +9,8 @@
  * 
  */
 
-#include <unistd.h>
-
 #ifndef DATALOGGER_EXTERN_H
 #define DATALOGGER_EXTERN_H
-
-// File and directories cannot exceed these limits.
-// #define MAX_FILE_SIZE 0x100000 // 1MB
-#define MAX_FILE_SIZE 0x100 // FOR DEBUG PURPOSES ONLY.
-#define MAX_FNAME_SIZE 0x80
-#define MAX_VAR_SIZE 0x100000
-#define MAX_LOG_SET_SIZE 0xC800000 // 200MB
 
 // Note: varname should be formatted as modname_varname. dlgr_register(const char* var_name, void* var_data, int var_size);
 /**
