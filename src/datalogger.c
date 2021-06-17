@@ -20,6 +20,8 @@
 #include "datalogger.h"
 #include "datalogger_extern.h"
 
+#define FILE_EXISTS ({snprintf(fname_buf, fname_buf_size, "%s_%d.log", var_name, var_index--); access(fname_buf, F_OK | R_OK);}) == 0
+
 // Example Directory (NEW)
 /* datalogger/
  * read_primer.tmp      <-- Holds info from last prime_read if read hasnt been called yet (read clears it).
@@ -485,7 +487,7 @@ int dlgr_count_logs(const char* var_name){
     const int fname_buf_size = strlen(var_name) + 17; // 16 == sizeof("_nnnnnnnnnn.log") + '\0'
     char fname_buf[fname_buf_size];
     int log_count = 0;
-    for(int var_index = dlgr_get_log_index(var_name); ({snprintf(fname_buf, fname_buf_size, "%s_%d.log", var_name, var_index--); access(fname_buf, F_OK | R_OK);}) == 0; log_count++);
+    for(int var_index = dlgr_get_log_index(var_name); FILE_EXISTS; log_count++);
 
     return log_count;
 }
