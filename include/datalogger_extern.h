@@ -51,4 +51,10 @@
  */
 #define DLGR_GET_MAX_INDEX(varname) dlgr_get_log_index(#varname)
 
+/**
+ * @brief 
+ * 
+ */
+#define DLGR_COUNT_LOGS(varname) dlgr_count_logs(#varname)
+
 #endif // DATALOGGER_EXTERN_H

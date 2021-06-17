@@ -19,12 +19,12 @@
 #endif
 
 // File and directories cannot exceed these limits.
-#define MAX_FILE_SIZE 0x100000 // 1MB
-// #define MAX_FILE_SIZE 0x10 // FOR DEBUG PURPOSES ONLY.
+// #define MAX_FILE_SIZE 0x100000 // 1MB
+#define MAX_FILE_SIZE 0x10 // FOR DEBUG PURPOSES ONLY.
 #define MAX_FNAME_SIZE 0x80
 #define MAX_VAR_SIZE 0x100000
-#define MAX_LOG_SET_SIZE 0xC800000 // 200MB
-// #define MAX_LOG_SET_SIZE 0x40 // FOR DEBUG PURPOSES ONLY.
+// #define MAX_LOG_SET_SIZE 0xC800000 // 200MB
+#define MAX_LOG_SET_SIZE 0x40 // FOR DEBUG PURPOSES ONLY.
 
 #define CALCULATE_NEXT_FILE_SIZE ({fseek(var_log_f, 0, SEEK_END); log_file_size = ftell(var_log_f); fseek(var_log_f, 0, SEEK_SET); fclose(var_log_f); log_file_size + var_size;})
 
@@ -96,5 +96,13 @@ int dlgr_get_log_index(const char* var_name);
  * @return int Negative on failure, new log index on success.
  */
 int dlgr_iterate_log_index(const char* var_name);
+
+/**
+ * @brief 
+ * 
+ * @param var_name 
+ * @return int 
+ */
+int dlgr_count_logs(const char* var_name);
 
 #endif // DATALOGGER_H

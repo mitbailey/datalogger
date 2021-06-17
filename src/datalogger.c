@@ -480,3 +480,12 @@ int dlgr_iterate_log_index(const char* var_name){
 
     return var_index;
 }
+
+int dlgr_count_logs(const char* var_name){
+    const int fname_buf_size = strlen(var_name) + 17; // 16 == sizeof("_nnnnnnnnnn.log") + '\0'
+    char fname_buf[fname_buf_size];
+    int log_count = 0;
+    for(int var_index = dlgr_get_log_index(var_name); ({snprintf(fname_buf, fname_buf_size, "%s_%d.log", var_name, var_index--); access(fname_buf, F_OK | R_OK);}) == 0; log_count++);
+
+    return log_count;
+}

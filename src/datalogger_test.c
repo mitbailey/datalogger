@@ -46,7 +46,7 @@ int main(){
     printf("Reading some testmod_testvars.\n");
     fflush(stdout);
     if(DLGR_PERFORM_READ(read_data, bytes) < 0){
-        return -1;
+        printf("dlgr read error\n");
     }
 
     printf("Printing read data:\n");
@@ -63,6 +63,8 @@ int main(){
     }
     printf("\n");
     fflush(stdout);
+
+    printf("Number of log files: %d.\n", DLGR_COUNT_LOGS(testmod_testvar));
 
     printf("Datalogger test end.\n");
     fflush(stdout);
